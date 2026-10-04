@@ -41,6 +41,19 @@ GitHub
 Active Core Contributors
 ------------------------
 
+The teams listed below -- the Maintainers Team, the Documentation Team, the
+Contributor Experience Team and the Communication Team -- together form the
+scikit-learn :ref:`core contributors <governance>`. Which of these teams
+you belong to does not change your standing as a core contributor; the
+:ref:`governance document <governance>` describes the shared rights and
+responsibilities that come with it.
+
+The GitHub team names differ slightly: on the `scikit-learn GitHub
+organization <https://github.com/orgs/scikit-learn/teams>`__, the Maintainers
+Team listed below appears as "Core-devs", while the Documentation, Contributor
+Experience and Communication teams keep the same names. This is worth keeping
+in mind when comparing this page with the organization's team list.
+
 Maintainers Team
 ................
 
