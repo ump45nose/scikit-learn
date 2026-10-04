@@ -474,7 +474,7 @@ class _BaseEncoder(TransformerMixin, BaseEstimator):
 
 
 class OneHotEncoder(_BaseEncoder):
-    """
+    r"""
     Encode categorical features as a one-hot numeric array.
 
     The input to this transformer should be an array-like of integers or
@@ -521,6 +521,21 @@ class OneHotEncoder(_BaseEncoder):
         However, dropping one category breaks the symmetry of the original
         representation and can therefore induce a bias in downstream models,
         for instance for penalized linear classification or regression models.
+
+        The right choice depends on the number of levels of the feature:
+
+        - For a feature with two levels, keeping both levels is redundant rather
+          than merely asymmetric. For a model penalized with L2 and fit with an
+          intercept, the coefficients of the two levels are always exact
+          opposites of each other (see the notes below), so the two
+          representations span the same space and describe the same model. For
+          such features, dropping one level -- in particular ``drop='if_binary'``
+          -- is safe and is the usual recommendation.
+        - For a feature with three or more levels, dropping one level is a
+          reparametrization that a penalized model is sensitive to: it changes
+          the meaning of the remaining coefficients relative to the dropped
+          level, so keeping all levels is the recommended default whenever the
+          downstream model is penalized.
 
         - None : retain all features (the default).
         - 'first' : drop the first category in each feature. If only one
@@ -676,6 +691,36 @@ class OneHotEncoder(_BaseEncoder):
     MultiLabelBinarizer : Transforms between iterable of
       iterables and a multilabel format, e.g. a (samples x classes) binary
       matrix indicating the presence of a class label.
+
+    Notes
+    -----
+    The advice for the ``drop`` parameter depends on how many levels a feature
+    has, and the reason is a property of L2-penalized linear models rather than a
+    property of the encoder.
+
+    For a model fit by minimizing a loss term plus an L2 penalty on the
+    coefficients only, with an unpenalized intercept, the one-hot columns of
+    one feature are interchangeable: adding the same constant to every level's
+    coefficient and subtracting it from the intercept leaves the prediction
+    unchanged. Writing :math:`s = \sum_{\ell} coef_\ell` for the sum over the
+    levels of a single feature, that shift changes the penalty by
+    :math:`2\delta s + k\delta^2` for a constant :math:`\delta` and
+    :math:`k` levels, which is minimized at :math:`\delta = -s/k`. Because the
+    fitted coefficients minimize the penalized objective, the shift must be
+    zero, so:
+
+    .. math:: \sum_{\ell} coef_\ell = 0
+
+    where the sum runs over the one-hot columns of one feature. For a
+    two-level feature this reduces to :math:`coef_1 = -coef_2`, so keeping both
+    levels is a redundant parametrization of the same model and dropping one
+    level (``drop='if_binary'``) does not change the space of achievable
+    predictions. For three or more levels the same identity holds, but the
+    dropped level becomes the reference against which the others are read, so
+    the two parametrizations are no longer equivalent and keeping all levels is
+    preferable. The identity is verified numerically for
+    :class:`~sklearn.linear_model.Ridge` in
+    `test_one_hot_encoder_l2_penalized_level_coefficients_sum_to_zero`.
 
     Examples
     --------

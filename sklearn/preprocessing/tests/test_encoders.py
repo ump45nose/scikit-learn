@@ -6,6 +6,7 @@ import pytest
 from scipy import sparse
 
 from sklearn.exceptions import NotFittedError
+from sklearn.linear_model import Ridge
 from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
 from sklearn.utils._missing import is_scalar_nan
 from sklearn.utils._testing import (
@@ -617,6 +618,45 @@ def test_one_hot_encoder_drop_equals_if_binary():
     result = ohe.fit_transform(X)
     assert_array_equal(ohe.drop_idx_, expected_drop_idx)
     assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize("n_levels", [2, 3, 4])
+def test_one_hot_encoder_l2_penalized_level_coefficients_sum_to_zero(n_levels):
+    """Check the identity that motivates the advice on ``drop``.
+
+    For a model minimizing a data term plus an L2 penalty on the
+    coefficients only, with an unpenalized intercept, the coefficients of
+    the one-hot columns of a single feature sum to zero. See the Notes of
+    :class:`~sklearn.preprocessing.OneHotEncoder`.
+    """
+    rng = np.random.RandomState(0)
+    n_samples = 200
+    levels = rng.randint(n_levels, size=n_samples)
+    numeric = rng.normal(size=n_samples)
+
+    y = 1.5 * levels + 0.7 * numeric + rng.normal(scale=0.3, size=n_samples)
+
+    categorical = np.array([f"cat_{level}" for level in levels], dtype=object).reshape(
+        -1, 1
+    )
+    ohe = OneHotEncoder(sparse_output=False)
+    X_encoded = np.hstack([ohe.fit_transform(categorical), numeric.reshape(-1, 1)])
+
+    # one slice per one-hot block, plus the numeric column left untouched
+    feature_sizes = [len(cats) for cats in ohe.categories_] + [1]
+    slices = np.cumsum([0] + feature_sizes)
+    assert slices[-1] == X_encoded.shape[1]
+
+    model = Ridge(alpha=1.0)
+    model.fit(X_encoded, y)
+
+    for i, cats in enumerate(ohe.categories_):
+        coefficients = model.coef_[slices[i] : slices[i + 1]]
+        assert_allclose(coefficients.sum(), 0.0, atol=1e-8)
+
+        if n_levels == 2:
+            # the binary case is what makes dropping one level harmless
+            assert_allclose(coefficients[0], -coefficients[1], atol=1e-8)
 
 
 @pytest.mark.parametrize(
