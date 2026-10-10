@@ -524,18 +524,18 @@ class OneHotEncoder(_BaseEncoder):
 
         The right choice depends on the number of levels of the feature:
 
-        - For a feature with two levels, keeping both levels is redundant rather
-          than merely asymmetric. For a model penalized with L2 and fit with an
-          intercept, the coefficients of the two levels are always exact
-          opposites of each other (see the notes below), so the two
-          representations span the same space and describe the same model. For
-          such features, dropping one level -- in particular ``drop='if_binary'``
-          -- is safe and is the usual recommendation.
-        - For a feature with three or more levels, dropping one level is a
-          reparametrization that a penalized model is sensitive to: it changes
-          the meaning of the remaining coefficients relative to the dropped
-          level, so keeping all levels is the recommended default whenever the
-          downstream model is penalized.
+        - For a feature with two levels, keeping both levels is redundant: for
+          an L2-penalized linear model fit with an unpenalized intercept, the
+          fitted coefficients of the two levels are exact opposites of each
+          other (see the Notes below). Dropping one level, for instance with
+          ``drop='if_binary'``, therefore loses no information, although the
+          fitted model can differ slightly because the penalty then acts on a
+          different parametrization.
+        - For a feature with three or more levels, dropping one level makes the
+          remaining coefficients relative to the dropped (reference) level, and
+          the penalty no longer treats the levels symmetrically. Keeping all
+          levels is therefore the recommended default when the downstream model
+          is penalized.
 
         - None : retain all features (the default).
         - 'first' : drop the first category in each feature. If only one
@@ -694,33 +694,26 @@ class OneHotEncoder(_BaseEncoder):
 
     Notes
     -----
-    The advice for the ``drop`` parameter depends on how many levels a feature
-    has, and the reason is a property of L2-penalized linear models rather than a
-    property of the encoder.
+    The advice for the ``drop`` parameter relies on a property of L2-penalized
+    linear models rather than of the encoder.
 
     For a model fit by minimizing a loss term plus an L2 penalty on the
-    coefficients only, with an unpenalized intercept, the one-hot columns of
-    one feature are interchangeable: adding the same constant to every level's
-    coefficient and subtracting it from the intercept leaves the prediction
-    unchanged. Writing :math:`s = \sum_{\ell} coef_\ell` for the sum over the
-    levels of a single feature, that shift changes the penalty by
-    :math:`2\delta s + k\delta^2` for a constant :math:`\delta` and
-    :math:`k` levels, which is minimized at :math:`\delta = -s/k`. Because the
-    fitted coefficients minimize the penalized objective, the shift must be
-    zero, so:
+    coefficients only, with an unpenalized intercept, adding the same constant
+    :math:`\delta` to the coefficients of all one-hot columns of one feature and
+    subtracting it from the intercept leaves the predictions unchanged. Writing
+    :math:`s = \sum_{\ell} coef_\ell` for the sum over the :math:`k` levels of
+    that feature, the shift changes the penalty by :math:`2\delta s + k\delta^2`,
+    which is minimized at :math:`\delta = -s/k`. Since the fitted coefficients
+    minimize the penalized objective, the optimal shift is zero, hence:
 
     .. math:: \sum_{\ell} coef_\ell = 0
 
-    where the sum runs over the one-hot columns of one feature. For a
-    two-level feature this reduces to :math:`coef_1 = -coef_2`, so keeping both
-    levels is a redundant parametrization of the same model and dropping one
-    level (``drop='if_binary'``) does not change the space of achievable
-    predictions. For three or more levels the same identity holds, but the
-    dropped level becomes the reference against which the others are read, so
-    the two parametrizations are no longer equivalent and keeping all levels is
-    preferable. The identity is verified numerically for
+    For a two-level feature this reduces to :math:`coef_1 = -coef_2`, which is
+    why ``drop='if_binary'`` is a reasonable choice; see also Eq. (3.12) and
+    the following text in https://doi.org/10.1093/biostatistics/kxm010. The
+    identity is checked numerically for
     :class:`~sklearn.linear_model.Ridge` in
-    `test_one_hot_encoder_l2_penalized_level_coefficients_sum_to_zero`.
+    ``test_one_hot_encoder_l2_penalized_level_coefficients_sum_to_zero``.
 
     Examples
     --------
