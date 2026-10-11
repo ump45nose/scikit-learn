@@ -522,6 +522,15 @@ class OneHotEncoder(_BaseEncoder):
         representation and can therefore induce a bias in downstream models,
         for instance for penalized linear classification or regression models.
 
+        - None : retain all features (the default).
+        - 'first' : drop the first category in each feature. If only one
+          category is present, the feature will be dropped entirely.
+        - 'if_binary' : drop the first category in each feature with two
+          categories. Features with 1 or more than 2 categories are
+          left intact.
+        - array : ``drop[i]`` is the category in feature ``X[:, i]`` that
+          should be dropped.
+
         The right choice depends on the number of levels of the feature:
 
         - For a feature with two levels, keeping both levels is redundant: for
@@ -536,15 +545,6 @@ class OneHotEncoder(_BaseEncoder):
           the penalty no longer treats the levels symmetrically. Keeping all
           levels is therefore the recommended default when the downstream model
           is penalized.
-
-        - None : retain all features (the default).
-        - 'first' : drop the first category in each feature. If only one
-          category is present, the feature will be dropped entirely.
-        - 'if_binary' : drop the first category in each feature with two
-          categories. Features with 1 or more than 2 categories are
-          left intact.
-        - array : ``drop[i]`` is the category in feature ``X[:, i]`` that
-          should be dropped.
 
         When `max_categories` or `min_frequency` is configured to group
         infrequent categories, the dropping behavior is handled after the
